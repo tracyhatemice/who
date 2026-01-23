@@ -52,7 +52,7 @@ Looks up a previously registered name and returns the associated IP address.
 ## Examples
 
 ```console
-$ docker run -d -p 8080:80 --name iamfoo traefik/whoami
+$ docker run -d -p 8080:80 --name iamfoo tracyhatemice/whoami-docker
 
 # Get your IP (requires X-Real-Ip header, typically set by reverse proxy)
 $ curl -H "X-Real-Ip: 203.0.113.50" http://localhost:8080/whoami
@@ -72,13 +72,21 @@ $ curl -v http://localhost:8080/whois/unknown
 ```
 
 ```yml
-version: '3.9'
-
 services:
   whoami:
-    image: traefik/whoami
+    image: ghcr.io/tracyhatemice/whoami-docker:latest
+    container_name: 'whoami'
+    networks:
+      - traefik
+    labels:
+      traefik.enable: true
+      traefik.docker.network: traefik
+      traefik.http.routers.whoami.entrypoints: https
+      traefik.http.routers.whoami.tls: true
+      traefik.http.routers.whoami.rule: HostRegexp(`^((ipv4|ipv6)\.)*example\.org$`) && ( PathPrefix(`/whoami`) || PathPrefix(`/whois`) || PathPrefix(`/iam`) )
+      traefik.http.routers.whoami.tls.certresolver: le
+    restart: 'unless-stopped'
     command:
-       # It tells whoami to start listening on 2001 instead of 80
-       - --port=2001
+       - --port=80
        - --verbose
 ```
