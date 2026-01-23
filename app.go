@@ -56,6 +56,11 @@ func iamHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	realIP := r.Header.Get("X-Real-Ip")
+	if realIP == "" {
+		http.Error(w, "X-Real-Ip header required", http.StatusBadRequest)
+		return
+	}
+
 	store[name] = realIP
 	_, _ = fmt.Fprintln(w, realIP)
 }
