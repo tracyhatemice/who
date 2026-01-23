@@ -1,7 +1,6 @@
 # whoami
 
-[![Docker Pulls](https://img.shields.io/docker/pulls/traefik/whoami.svg)](https://hub.docker.com/r/traefik/whoami/)
-[![Build Status](https://github.com/traefik/whoami/workflows/Main/badge.svg?branch=master)](https://github.com/traefik/whoami/actions)
+[![Build and Push Container Image](https://github.com/tracyhatemice/whoami-docker/actions/workflows/docker-build.yml/badge.svg?branch=master)](https://github.com/tracyhatemice/whoami-docker/actions/workflows/docker-build.yml)
 
 Tiny Go webserver that returns client IP information and provides a simple name-to-IP mapping store.
 
