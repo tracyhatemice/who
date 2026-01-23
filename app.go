@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -32,14 +33,27 @@ func main() {
 	log.Fatal(http.ListenAndServe(":"+port, mux))
 }
 
+type responseCapture struct {
+	http.ResponseWriter
+	body []byte
+}
+
+func (rc *responseCapture) Write(b []byte) (int, error) {
+	rc.body = append(rc.body, b...)
+	return rc.ResponseWriter.Write(b)
+}
+
 func handle(next http.HandlerFunc, verbose bool) http.HandlerFunc {
 	if !verbose {
 		return next
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		next(w, r)
-		log.Printf("%s - - [%s] \"%s %s %s\" - -", r.RemoteAddr, time.Now().Format("02/Jan/2006:15:04:05 -0700"), r.Method, r.URL.Path, r.Proto)
+		rc := &responseCapture{ResponseWriter: w}
+		next(rc, r)
+		clientRealIP := r.Header.Get("X-Real-Ip")
+		responseIP := strings.TrimSpace(string(rc.body))
+		log.Printf("%s - - [%s] \"%s %s %s\" - - [RequestRealIP:%s] [Response:%s]", r.RemoteAddr, time.Now().Format("02/Jan/2006:15:04:05 -0700"), r.Method, r.URL.Path, r.Proto, clientRealIP, responseIP)
 	}
 }
 
