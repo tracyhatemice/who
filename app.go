@@ -23,12 +23,13 @@ func init() {
 func main() {
 	flag.Parse()
 
-	http.HandleFunc("/", handle(whoamiHandler, verbose))
-	http.HandleFunc("/iam/", handle(iamHandler, verbose))
-	http.HandleFunc("/whois/", handle(whoisHandler, verbose))
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /whoami", handle(whoamiHandler, verbose))
+	mux.HandleFunc("GET /iam/{name}", handle(iamHandler, verbose))
+	mux.HandleFunc("GET /whois/{name}", handle(whoisHandler, verbose))
 
 	log.Printf("Starting up on port %s", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	log.Fatal(http.ListenAndServe(":"+port, mux))
 }
 
 func handle(next http.HandlerFunc, verbose bool) http.HandlerFunc {
@@ -49,11 +50,7 @@ func whoamiHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func iamHandler(w http.ResponseWriter, r *http.Request) {
-	name := r.URL.Path[len("/iam/"):]
-	if name == "" {
-		http.Error(w, "name required", http.StatusBadRequest)
-		return
-	}
+	name := r.PathValue("name")
 
 	realIP := r.Header.Get("X-Real-Ip")
 	if realIP == "" {
@@ -66,11 +63,7 @@ func iamHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func whoisHandler(w http.ResponseWriter, r *http.Request) {
-	name := r.URL.Path[len("/whois/"):]
-	if name == "" {
-		http.Error(w, "name required", http.StatusBadRequest)
-		return
-	}
+	name := r.PathValue("name")
 
 	realIP, ok := store[name]
 	if !ok {
