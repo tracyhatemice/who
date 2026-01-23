@@ -1,6 +1,6 @@
-# whoami
+# who
 
-[![Build and Push Container Image](https://github.com/tracyhatemice/whoami-docker/actions/workflows/docker-build.yml/badge.svg?branch=master)](https://github.com/tracyhatemice/whoami-docker/actions/workflows/docker-build.yml)
+[![Build and Push Container Image](https://github.com/tracyhatemice/who/actions/workflows/docker-build.yml/badge.svg?branch=master)](https://github.com/tracyhatemice/who/actions/workflows/docker-build.yml)
 
 Tiny Go webserver that returns client IP information and provides a simple name-to-IP mapping store.
 
@@ -44,16 +44,14 @@ Looks up a previously registered name and returns the associated IP address.
 
 ### Flags
 
-| Flag      | Env var              | Description                            |
-|-----------|----------------------|----------------------------------------|
-| `port`    | `WHOAMI_PORT_NUMBER` | Port number to listen on (default: `80`) |
-| `verbose` |                      | Enable verbose logging                 |
+| Flag      | Description                            |
+|-----------|----------------------------------------|
+| `port`    | Port number to listen on (default: `80`) |
+| `verbose` | Enable verbose logging                 |
 
 ## Examples
 
 ```console
-$ docker run -d -p 8080:80 --name iamfoo tracyhatemice/whoami-docker
-
 # Get your IP (requires X-Real-Ip header, typically set by reverse proxy)
 $ curl -H "X-Real-Ip: 203.0.113.50" http://localhost:8080/whoami
 203.0.113.50
@@ -73,18 +71,18 @@ $ curl -v http://localhost:8080/whois/unknown
 
 ```yml
 services:
-  whoami:
-    image: ghcr.io/tracyhatemice/whoami-docker:latest
-    container_name: 'whoami'
+  who:
+    image: ghcr.io/tracyhatemice/who:latest
+    container_name: 'who'
     networks:
       - traefik
     labels:
       traefik.enable: true
       traefik.docker.network: traefik
-      traefik.http.routers.whoami.entrypoints: https
-      traefik.http.routers.whoami.tls: true
-      traefik.http.routers.whoami.rule: HostRegexp(`^((ipv4|ipv6)\.)*example\.org$`) && ( PathPrefix(`/whoami`) || PathPrefix(`/whois`) || PathPrefix(`/iam`) )
-      traefik.http.routers.whoami.tls.certresolver: le
+      traefik.http.routers.who.entrypoints: https
+      traefik.http.routers.who.tls: true
+      traefik.http.routers.who.rule: HostRegexp(`^((ipv4|ipv6)\.)*example\.org$`) && ( PathPrefix(`/whoami`) || PathPrefix(`/whois`) || PathPrefix(`/iam`) )
+      traefik.http.routers.who.tls.certresolver: le
     restart: 'unless-stopped'
     command:
        - --port=80
