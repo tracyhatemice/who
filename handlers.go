@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -18,40 +19,47 @@ type Server struct {
 }
 
 func (s *Server) whoamiHandler(w http.ResponseWriter, r *http.Request) {
-	if realIP := r.Header.Get("X-Real-Ip"); realIP != "" {
-		_, _ = fmt.Fprintln(w, realIP)
+	if ip := r.Header.Get("X-Real-Ip"); ip != "" {
+		_, _ = fmt.Fprintln(w, ip)
 	}
 }
 
 func (s *Server) iamHandler(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 
-	realIP := r.Header.Get("X-Real-Ip")
-	if realIP == "" {
-		http.Error(w, "X-Real-Ip header required", http.StatusBadRequest)
-		return
+	// Check for explicit IP in path, validate it
+	var ip string
+	if ipParam := r.PathValue("ip"); ipParam != "" && net.ParseIP(ipParam) != nil {
+		ip = ipParam
+	} else {
+		// Fallback to X-Real-Ip header
+		ip = r.Header.Get("X-Real-Ip")
+		if ip == "" {
+			http.Error(w, "X-Real-Ip header required", http.StatusBadRequest)
+			return
+		}
 	}
 
 	// Store the mapping (thread-safe)
-	changed := s.store.Set(name, realIP)
+	changed := s.store.Set(name, ip)
 
 	// Trigger DDNS update if IP changed and name is non-empty (non-blocking)
 	if changed && name != "" && s.ddns != nil {
-		s.ddns.TriggerUpdate(name, realIP)
+		s.ddns.TriggerUpdate(name, ip)
 	}
 
-	_, _ = fmt.Fprintln(w, realIP)
+	_, _ = fmt.Fprintln(w, ip)
 }
 
 func (s *Server) whoisHandler(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 
-	realIP, ok := s.store.Get(name)
+	ip, ok := s.store.Get(name)
 	if !ok {
 		http.NotFound(w, r)
 		return
 	}
-	_, _ = fmt.Fprintln(w, realIP)
+	_, _ = fmt.Fprintln(w, ip)
 }
 
 // responseCapture wraps ResponseWriter to capture the response body.
@@ -74,12 +82,12 @@ func (s *Server) withLogging(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		rc := &responseCapture{ResponseWriter: w}
 		next(rc, r)
-		clientRealIP := r.Header.Get("X-Real-Ip")
+		clientIP := r.Header.Get("X-Real-Ip")
 		responseIP := strings.TrimSpace(string(rc.body))
-		log.Printf("HTTP: %s - - [%s] \"%s %s %s\" - - [RequestRealIP:%s] [Response:%s]",
+		log.Printf("HTTP: %s - - [%s] \"%s %s %s\" - - [RequestIP:%s] [Response:%s]",
 			r.RemoteAddr,
 			time.Now().Format("02/Jan/2006:15:04:05 -0700"),
 			r.Method, r.URL.Path, r.Proto,
-			clientRealIP, responseIP)
+			clientIP, responseIP)
 	}
 }

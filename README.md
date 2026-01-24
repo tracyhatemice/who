@@ -2,7 +2,9 @@
 
 [![Build and Push Container Image](https://github.com/tracyhatemice/who/actions/workflows/docker-build.yml/badge.svg?branch=master)](https://github.com/tracyhatemice/who/actions/workflows/docker-build.yml)
 
-Tiny Go webserver that returns client IP information and provides a simple name-to-IP mapping store.
+Small Go webserver that returns client IPs and stores simple name→IP mappings. Optionally performs DDNS updates when an IP changes.
+
+Intended to run in parallel with Traefik — place the container on the same Docker network and configure Traefik router labels (see example below).
 
 ## Usage
 
@@ -13,7 +15,7 @@ Tiny Go webserver that returns client IP information and provides a simple name-
 Returns the client's real IP address from the `X-Real-Ip` header.
 
 **Request:**
-- Requires `X-Real-Ip` header to be set (typically by a reverse proxy)
+- Requires `X-Real-Ip` header to be set (typically set by traefik)
 
 **Response:**
 - Returns the IP address from the `X-Real-Ip` header
@@ -30,6 +32,18 @@ Registers a name with the client's IP address. Stores the mapping of `name` to t
 **Response:**
 - Returns the stored IP address
 - Returns `400 Bad Request` if `X-Real-Ip` header is missing
+
+#### `GET /iam/{name}/{ip}`
+
+Registers a name with a manually specified IP address.
+
+**Request:**
+- `{name}` - Path parameter for the name to register
+- `{ip}` - Path parameter for the IP address (IPv4 or IPv6)
+
+**Response:**
+- If `{ip}` is a valid IPv4/IPv6: stores and returns the provided IP
+- If `{ip}` is invalid: falls back to `X-Real-Ip` header behavior
 
 #### `GET /whois/{name}`
 
@@ -106,6 +120,10 @@ $ curl -H "X-Real-Ip: 203.0.113.50" http://localhost:8080/whoami
 # Register a name with your IP
 $ curl -H "X-Real-Ip: 203.0.113.50" http://localhost:8080/iam/alice
 203.0.113.50
+
+# Register a name with a specific IP
+$ curl http://localhost:8080/iam/bob/192.168.1.100
+192.168.1.100
 
 # Look up a registered name
 $ curl http://localhost:8080/whois/alice

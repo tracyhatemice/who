@@ -4,7 +4,6 @@ import (
 	"flag"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/tracyhatemice/who/ddns"
 )
@@ -16,7 +15,7 @@ func main() {
 		verbose    bool
 		configPath string
 	)
-	flag.StringVar(&port, "port", getEnv("WHOAMI_PORT_NUMBER", "80"), "Port number to listen on")
+	flag.StringVar(&port, "port", "80", "Port number to listen on")
 	flag.BoolVar(&verbose, "verbose", false, "Enable verbose logging")
 	flag.StringVar(&configPath, "config", "", "Path to config file (optional)")
 	flag.Parse()
@@ -58,16 +57,9 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /whoami", server.withLogging(server.whoamiHandler))
 	mux.HandleFunc("GET /iam/{name}", server.withLogging(server.iamHandler))
+	mux.HandleFunc("GET /iam/{name}/{ip}", server.withLogging(server.iamHandler))
 	mux.HandleFunc("GET /whois/{name}", server.withLogging(server.whoisHandler))
 
 	log.Printf("Starting up on port %s", port)
 	log.Fatal(http.ListenAndServe(":"+port, mux))
-}
-
-func getEnv(key, fallback string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		return fallback
-	}
-	return value
 }

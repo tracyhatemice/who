@@ -1,6 +1,6 @@
 FROM golang:1-alpine AS builder
 
-RUN apk --no-cache --no-progress add ca-certificates tzdata \
+RUN apk --no-cache --no-progress add ca-certificates tzdata upx \
     && update-ca-certificates \
     && rm -rf /var/cache/apk/*
 
@@ -10,7 +10,8 @@ COPY go.mod .
 
 COPY . .
 
-RUN CGO_ENABLED=0 go build -a --trimpath --installsuffix cgo --ldflags="-s" -o who
+RUN CGO_ENABLED=0 go build -a --trimpath --installsuffix cgo --ldflags="-s -w" -o who \
+    && upx --best --lzma who
 
 # Create a minimal container to run a Golang static binary
 FROM scratch
