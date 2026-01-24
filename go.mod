@@ -1,3 +1,3 @@
-module github.com/traefik/whoami
+module github.com/tracyhatemice/who
 
-go 1.24
+go 1.25

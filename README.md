@@ -44,10 +44,57 @@ Looks up a previously registered name and returns the associated IP address.
 
 ### Flags
 
-| Flag      | Description                            |
-|-----------|----------------------------------------|
-| `port`    | Port number to listen on (default: `80`) |
-| `verbose` | Enable verbose logging                 |
+| Flag      | Description                                     |
+|-----------|-------------------------------------------------|
+| `port`    | Port number to listen on (default: `80`)        |
+| `verbose` | Enable verbose logging                          |
+| `config`  | Path to config file for DDNS feature (optional) |
+
+## DDNS Feature
+
+The DDNS feature allows automatic DNS updates when a name is registered or updated via `/iam/{name}`. When an IP address changes, the configured DNS provider is updated asynchronously.
+
+### Configuration
+
+Create a `config.json` file (see `config.example.json` for reference):
+
+```json
+{
+  "ddns": [
+    {
+      "provider": "route53",
+      "domain": "julia.ddns.example.com",
+      "ip_version": "ipv4",
+      "access_key": "AKIAIOSFODNN7EXAMPLE",
+      "secret_key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+      "zone_id": "Z3M3LMPEXAMPLE",
+      "ttl": 300,
+      "iam": "juliav4"
+    }
+  ]
+}
+```
+
+### DDNS Configuration Fields
+
+| Field        | Description                                                                 |
+|--------------|-----------------------------------------------------------------------------|
+| `provider`   | DNS provider (currently only `route53` is supported)                        |
+| `domain`     | Domain to update (e.g., `sub.example.com`, `example.com`, `*.example.com`)  |
+| `ip_version` | `ipv4` for A records, `ipv6` for AAAA records                               |
+| `access_key` | AWS Access Key ID                                                           |
+| `secret_key` | AWS Secret Access Key                                                       |
+| `zone_id`    | Route53 Hosted Zone ID                                                      |
+| `ttl`        | DNS record TTL in seconds (default: 300)                                    |
+| `iam`        | Name that triggers this DDNS update (matches `{name}` in `/iam/{name}`)     |
+
+### How It Works
+
+1. A client calls `/iam/{name}` with an IP address
+2. The IP is stored in memory and returned immediately
+3. If `{name}` matches an `iam` field in the DDNS config, and the IP changed, a background update is triggered
+4. The DNS update runs asynchronously and does not block the API response
+5. DDNS failures are logged but do not affect the `/whois/{name}` lookup
 
 ## Examples
 
@@ -76,6 +123,8 @@ services:
     container_name: 'who'
     networks:
       - traefik
+    volumes:
+      - ./config.json:/config.json:ro
     labels:
       traefik.enable: true
       traefik.docker.network: traefik
@@ -87,4 +136,5 @@ services:
     command:
        - --port=80
        - --verbose
+       - --config=/config.json
 ```

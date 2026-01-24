@@ -1,4 +1,7 @@
 .idea
 vendor/
 /whoami
+/who
 dist/
+config.json
+.claude

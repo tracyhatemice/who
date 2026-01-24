@@ -1,0 +1,24 @@
+{
+  "ddns": [
+    {
+      "provider": "route53",
+      "domain": "julia.ddns.example.com",
+      "ip_version": "ipv4",
+      "access_key": "AKIAIOSFODNN7EXAMPLE",
+      "secret_key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+      "zone_id": "Z3M3LMPEXAMPLE",
+      "ttl": 300,
+      "iam": "juliav4"
+    },
+    {
+      "provider": "route53",
+      "domain": "julia.ddns.example.com",
+      "ip_version": "ipv6",
+      "access_key": "AKIAIOSFODNN7EXAMPLE",
+      "secret_key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+      "zone_id": "Z3M3LMPEXAMPLE",
+      "ttl": 300,
+      "iam": "juliav6"
+    }
+  ]
+}
