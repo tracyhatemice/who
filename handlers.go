@@ -19,7 +19,7 @@ type Server struct {
 }
 
 func (s *Server) whoamiHandler(w http.ResponseWriter, r *http.Request) {
-	if ip := r.Header.Get("X-Real-Ip"); ip != "" {
+	if ip := r.Header.Get("X-Real-Ip"); ip != "" && net.ParseIP(ip) != nil {
 		_, _ = fmt.Fprintln(w, ip)
 	}
 }
@@ -32,10 +32,10 @@ func (s *Server) iamHandler(w http.ResponseWriter, r *http.Request) {
 	if ipParam := r.PathValue("ip"); ipParam != "" && net.ParseIP(ipParam) != nil {
 		ip = ipParam
 	} else {
-		// Fallback to X-Real-Ip header
+		// Fallback to X-Real-Ip header, validate it
 		ip = r.Header.Get("X-Real-Ip")
-		if ip == "" {
-			http.Error(w, "X-Real-Ip header required", http.StatusBadRequest)
+		if ip == "" || net.ParseIP(ip) == nil {
+			http.Error(w, "valid X-Real-Ip header required", http.StatusBadRequest)
 			return
 		}
 	}
