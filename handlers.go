@@ -76,7 +76,7 @@ func (s *Server) withLogging(next http.HandlerFunc) http.HandlerFunc {
 		next(rc, r)
 		clientRealIP := r.Header.Get("X-Real-Ip")
 		responseIP := strings.TrimSpace(string(rc.body))
-		log.Printf("%s - - [%s] \"%s %s %s\" - - [RequestRealIP:%s] [Response:%s]",
+		log.Printf("HTTP: %s - - [%s] \"%s %s %s\" - - [RequestRealIP:%s] [Response:%s]",
 			r.RemoteAddr,
 			time.Now().Format("02/Jan/2006:15:04:05 -0700"),
 			r.Method, r.URL.Path, r.Proto,
