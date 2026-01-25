@@ -18,8 +18,39 @@ type Server struct {
 	verbose bool
 }
 
+// getClientIP extracts the client IP from the request.
+// Priority: X-Forwarded-For (last) > X-Real-IP > RemoteAddr
+func getClientIP(r *http.Request) string {
+	// Check X-Forwarded-For (use last IP - closest to server)
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		ips := strings.Split(xff, ",")
+		if len(ips) > 0 {
+			ip := strings.TrimSpace(ips[len(ips)-1])
+			if netIP := net.ParseIP(ip); netIP != nil {
+				return netIP.String()
+			}
+		}
+	}
+
+	// Check X-Real-IP
+	if realIP := r.Header.Get("X-Real-Ip"); realIP != "" {
+		if netIP := net.ParseIP(realIP); netIP != nil {
+			return netIP.String()
+		}
+	}
+
+	// Fall back to RemoteAddr
+	if ip, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		if netIP := net.ParseIP(ip); netIP != nil {
+			return netIP.String()
+		}
+	}
+
+	return ""
+}
+
 func (s *Server) whoamiHandler(w http.ResponseWriter, r *http.Request) {
-	if ip := r.Header.Get("X-Real-Ip"); ip != "" && net.ParseIP(ip) != nil {
+	if ip := getClientIP(r); ip != "" {
 		_, _ = fmt.Fprintln(w, ip)
 	}
 }
@@ -29,13 +60,17 @@ func (s *Server) iamHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Check for explicit IP in path, validate it
 	var ip string
-	if ipParam := r.PathValue("ip"); ipParam != "" && net.ParseIP(ipParam) != nil {
-		ip = ipParam
-	} else {
-		// Fallback to X-Real-Ip header, validate it
-		ip = r.Header.Get("X-Real-Ip")
-		if ip == "" || net.ParseIP(ip) == nil {
-			http.Error(w, "valid X-Real-Ip header required", http.StatusBadRequest)
+	if ipParam := r.PathValue("ip"); ipParam != "" {
+		if netIP := net.ParseIP(ipParam); netIP != nil {
+			ip = netIP.String()
+		}
+	}
+
+	// Fallback to client IP from headers/RemoteAddr
+	if ip == "" {
+		ip = getClientIP(r)
+		if ip == "" {
+			http.Error(w, "valid IP required", http.StatusBadRequest)
 			return
 		}
 	}
@@ -82,9 +117,9 @@ func (s *Server) withLogging(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		rc := &responseCapture{ResponseWriter: w}
 		next(rc, r)
-		clientIP := r.Header.Get("X-Real-Ip")
+		clientIP := getClientIP(r)
 		responseIP := strings.TrimSpace(string(rc.body))
-		log.Printf("HTTP: %s - - [%s] \"%s %s %s\" - - [RequestIP:%s] [Response:%s]",
+		log.Printf("HTTP: %s - - [%s] \"%s %s %s\" - - [ClientIP:%s] [Response:%s]",
 			r.RemoteAddr,
 			time.Now().Format("02/Jan/2006:15:04:05 -0700"),
 			r.Method, r.URL.Path, r.Proto,
