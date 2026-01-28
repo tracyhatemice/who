@@ -64,6 +64,25 @@ Looks up a previously registered name and returns the associated IP address.
 | `verbose` | Enable verbose logging                          |
 | `config`  | Path to config file for DDNS feature (optional) |
 
+## Persistent IP Storage
+
+The `who` config section pre-loads name-to-IP mappings on startup and writes changes back to `config.json` when updated via `/iam/{name}`. This means IPs survive container restarts without needing to re-register.
+
+Predefine addresses by including both `iam` and `ip` in the config so the service can respond to `/whois/{name}` immediately. Alternatively, include only `iam` entries and allow clients to register and update addresses dynamically via the `/iam/{name}` endpoints.
+
+```json
+{
+  "who": [
+    { "iam": "juliav4", "ip": "111.111.111.111" },
+    { "iam": "juliav6" }
+  ]
+}
+```
+
+- On startup: entries with `ip` set are loaded into the store, immediately available via `/whois/{name}`
+- On IP change: if `{name}` is in the `who` config, the new IP is written back to `config.json`
+- Names not in the `who` config are stored in memory only (lost on restart)
+
 ## DDNS Feature
 
 The DDNS feature allows automatic DNS updates when a name is registered or updated via `/iam/{name}`. When an IP address changes, the configured DNS provider is updated asynchronously.
@@ -74,6 +93,10 @@ Create a `config.json` file (see `config.example.json` for reference):
 
 ```json
 {
+  "who": [
+    { "iam": "juliav4", "ip": "111.111.111.111" },
+    { "iam": "juliav6" }
+  ]
   "ddns": [
     {
       "provider": "route53",
@@ -142,7 +165,7 @@ services:
     networks:
       - traefik
     volumes:
-      - ./config.json:/config.json:ro
+      - ./config.json:/config.json
     labels:
       traefik.enable: true
       traefik.docker.network: traefik
