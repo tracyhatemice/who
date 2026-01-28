@@ -22,6 +22,7 @@ type Server struct {
 	configPath string
 	configMu   sync.Mutex // protects config file writes
 	whoNames   map[string]bool
+	aliases    map[string][]string
 	config     *Config
 }
 
@@ -64,6 +65,12 @@ func (s *Server) whoamiHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) iamHandler(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
+
+	// Reject updates for alias names
+	if _, isAlias := s.aliases[name]; isAlias {
+		http.Error(w, "cannot update alias", http.StatusBadRequest)
+		return
+	}
 
 	// Check for explicit IP in path, validate it
 	var ip string
@@ -126,6 +133,26 @@ func (s *Server) saveWhoIP(name, ip string) {
 func (s *Server) whoisHandler(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 
+	// Check if this is an alias
+	if aliasedNames, isAlias := s.aliases[name]; isAlias {
+		// Resolve all aliased names and return their IPs
+		var ips []string
+		for _, aliasedName := range aliasedNames {
+			if ip, ok := s.store.Get(aliasedName); ok {
+				ips = append(ips, ip)
+			}
+		}
+		if len(ips) == 0 {
+			http.NotFound(w, r)
+			return
+		}
+		for _, ip := range ips {
+			_, _ = fmt.Fprintln(w, ip)
+		}
+		return
+	}
+
+	// Regular name lookup
 	ip, ok := s.store.Get(name)
 	if !ok {
 		http.NotFound(w, r)

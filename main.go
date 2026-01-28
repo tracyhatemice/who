@@ -65,19 +65,24 @@ func main() {
 		log.Printf("WEBHOOK: loaded %d entries", len(cfg.Webhooks))
 	}
 
-	// Build who names set and pre-load IPs into store
+	// Build who names set, pre-load IPs into store, and load aliases
 	store := NewStore()
 	whoNames := make(map[string]bool)
+	aliases := make(map[string][]string)
 	for _, entry := range cfg.Who {
 		if entry.IAM != "" {
 			whoNames[entry.IAM] = true
-			if entry.IP != "" {
+			if len(entry.Alias) > 0 {
+				// This is an alias entry
+				aliases[entry.IAM] = entry.Alias
+			} else if entry.IP != "" {
+				// This is a regular IP entry
 				store.Set(entry.IAM, entry.IP)
 			}
 		}
 	}
 	if len(whoNames) > 0 {
-		log.Printf("WHO: pre-loaded %d entries", len(whoNames))
+		log.Printf("WHO: pre-loaded %d entries (%d aliases)", len(whoNames), len(aliases))
 	}
 
 	// Create server with dependencies
@@ -88,6 +93,7 @@ func main() {
 		verbose:    verbose,
 		configPath: configPath,
 		whoNames:   whoNames,
+		aliases:    aliases,
 		config:     cfg,
 	}
 

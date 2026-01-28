@@ -7,6 +7,10 @@
     {
       "iam": "juliav6",
       "ip": "2001:db8::1"
+    },
+    {
+      "iam": "julia",
+      "alias": ["juliav4", "juliav6"]
     }
   ],
   "ddns": [

@@ -12,10 +12,11 @@ type Config struct {
 	Webhooks []WebhookEntry  `json:"webhooks"`
 }
 
-// WhoEntry represents a pre-loaded name-to-IP mapping.
+// WhoEntry represents a pre-loaded name-to-IP mapping or alias.
 type WhoEntry struct {
-	IAM string `json:"iam"`
-	IP  string `json:"ip"`
+	IAM   string   `json:"iam"`
+	IP    string   `json:"ip,omitempty"`
+	Alias []string `json:"alias,omitempty"`
 }
 
 // DDNSEntry represents a single DDNS configuration.
