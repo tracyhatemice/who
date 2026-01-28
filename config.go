@@ -7,8 +7,9 @@ import (
 
 // Config holds all application configuration.
 type Config struct {
-	Who  []WhoEntry  `json:"who"`
-	DDNS []DDNSEntry `json:"ddns"`
+	Who      []WhoEntry      `json:"who"`
+	DDNS     []DDNSEntry     `json:"ddns"`
+	Webhooks []WebhookEntry  `json:"webhooks"`
 }
 
 // WhoEntry represents a pre-loaded name-to-IP mapping.
@@ -27,6 +28,16 @@ type DDNSEntry struct {
 	SecretKey string `json:"secret_key"`
 	ZoneID    string `json:"zone_id"`
 	TTL       int    `json:"ttl"`
+}
+
+// WebhookEntry represents a webhook notification configuration.
+type WebhookEntry struct {
+	IAM      string            `json:"iam"`
+	URL      string            `json:"url"`
+	Method   string            `json:"method"`
+	Headers  map[string]string `json:"headers"`
+	Timeout  int               `json:"timeout"`
+	Debounce int               `json:"debounce"`
 }
 
 // LoadConfig reads configuration from a JSON file.

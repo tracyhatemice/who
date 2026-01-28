@@ -10,15 +10,17 @@ import (
 	"time"
 
 	"github.com/tracyhatemice/who/ddns"
+	"github.com/tracyhatemice/who/webhook"
 )
 
 // Server holds the application dependencies.
 type Server struct {
 	store      *Store
 	ddns       *ddns.Dispatcher
+	webhook    *webhook.Dispatcher
 	verbose    bool
 	configPath string
-	configMu   sync.Mutex  // protects config file writes
+	configMu   sync.Mutex // protects config file writes
 	whoNames   map[string]bool
 	config     *Config
 }
@@ -92,6 +94,10 @@ func (s *Server) iamHandler(w http.ResponseWriter, r *http.Request) {
 		// Trigger DDNS update (non-blocking)
 		if s.ddns != nil {
 			s.ddns.TriggerUpdate(name, ip)
+		}
+		// Trigger webhook notification (non-blocking)
+		if s.webhook != nil {
+			s.webhook.TriggerWebhook(name, ip)
 		}
 	}
 

@@ -96,7 +96,7 @@ Create a `config.json` file (see `config.example.json` for reference):
   "who": [
     { "iam": "juliav4", "ip": "111.111.111.111" },
     { "iam": "juliav6" }
-  ]
+  ],
   "ddns": [
     {
       "provider": "route53",
@@ -107,6 +107,18 @@ Create a `config.json` file (see `config.example.json` for reference):
       "zone_id": "Z3M3LMPEXAMPLE",
       "ttl": 300,
       "iam": "juliav4"
+    }
+  ],
+  "webhooks": [
+    {
+      "iam": "juliav4",
+      "url": "https://example.com/reload/allowlist",
+      "method": "POST",
+      "headers": {
+        "Authorization": "Bearer token123"
+      },
+      "timeout": 10,
+      "debounce": 5
     }
   ]
 }
@@ -132,6 +144,91 @@ Create a `config.json` file (see `config.example.json` for reference):
 3. If `{name}` matches an `iam` field in the DDNS config, and the IP changed, a background update is triggered
 4. The DNS update runs asynchronously and does not block the API response
 5. DDNS failures are logged but do not affect the `/whois/{name}` lookup
+
+## Webhook Notifications
+
+The webhook feature sends HTTP notifications to external services when a name's IP address changes. This is useful for triggering firewall allowlist reloads, cache invalidations, or other automation tasks.
+
+### Configuration
+
+Add webhook entries to your `config.json`:
+
+```json
+{
+  "who": [
+    { "iam": "juliav4", "ip": "111.111.111.111" },
+    { "iam": "juliav6" }
+  ],
+  "webhooks": [
+    {
+      "iam": "juliav4",
+      "url": "https://example.com/reload/allowlist",
+      "method": "POST",
+      "headers": {
+        "Authorization": "Bearer token123"
+      },
+      "timeout": 10,
+      "debounce": 5
+    }
+  ]
+}
+```
+
+### Webhook Configuration Fields
+
+| Field      | Description                                                        |
+|------------|--------------------------------------------------------------------|
+| `iam`      | Name that triggers this webhook (matches `{name}` in `/iam/{name}`) |
+| `url`      | Target URL to send the HTTP request                                |
+| `method`   | HTTP method (default: `POST`)                                      |
+| `headers`  | Custom headers (e.g., authentication tokens)                       |
+| `timeout`  | Request timeout in seconds (default: 10, max: 30)                  |
+| `debounce` | Minimum seconds between requests to same URL (default: 5)          |
+
+### Webhook Payload
+
+Webhooks send a fixed JSON payload with `Content-Type: application/json`:
+
+```json
+{
+  "iam": "juliav4",
+  "ip": "203.0.113.50",
+  "timestamp": "2026-01-28T12:34:56Z"
+}
+```
+
+### How It Works
+
+1. A client calls `/iam/{name}` and the IP changes
+2. If `{name}` matches an `iam` field in the webhook config, a notification is triggered
+3. The webhook checks the debounce timer for the target URL
+4. If debounce period has passed, the webhook sends the request asynchronously
+5. Multiple webhooks can be configured for the same `iam` name
+6. URL-based debouncing prevents duplicate notifications when multiple names update simultaneously
+
+### Example Use Case
+
+Configure a webhook to reload a firewall allowlist when a client's IP changes:
+
+```json
+{
+  "webhooks": [
+    {
+      "iam": "office-vpn",
+      "url": "https://firewall.example.com/api/reload",
+      "method": "POST",
+      "headers": {
+        "Authorization": "Bearer secret-token",
+        "X-Action": "reload-allowlist"
+      },
+      "timeout": 15,
+      "debounce": 10
+    }
+  ]
+}
+```
+
+When a client calls `/iam/office-vpn`, the firewall receives the new IP and can update its allowlist automatically.
 
 ## Examples
 

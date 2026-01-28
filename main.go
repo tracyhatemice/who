@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/tracyhatemice/who/ddns"
+	"github.com/tracyhatemice/who/webhook"
 )
 
 func main() {
@@ -46,6 +47,24 @@ func main() {
 		log.Printf("DDNS: loaded %d entries", len(cfg.DDNS))
 	}
 
+	// Initialize webhook dispatcher
+	var webhookDispatcher *webhook.Dispatcher
+	if len(cfg.Webhooks) > 0 {
+		webhookConfigs := make([]webhook.Config, len(cfg.Webhooks))
+		for i, entry := range cfg.Webhooks {
+			webhookConfigs[i] = webhook.Config{
+				IAM:      entry.IAM,
+				URL:      entry.URL,
+				Method:   entry.Method,
+				Headers:  entry.Headers,
+				Timeout:  entry.Timeout,
+				Debounce: entry.Debounce,
+			}
+		}
+		webhookDispatcher = webhook.NewDispatcher(webhookConfigs)
+		log.Printf("WEBHOOK: loaded %d entries", len(cfg.Webhooks))
+	}
+
 	// Build who names set and pre-load IPs into store
 	store := NewStore()
 	whoNames := make(map[string]bool)
@@ -65,6 +84,7 @@ func main() {
 	server := &Server{
 		store:      store,
 		ddns:       ddnsDispatcher,
+		webhook:    webhookDispatcher,
 		verbose:    verbose,
 		configPath: configPath,
 		whoNames:   whoNames,

@@ -30,5 +30,27 @@
       "ttl": 300,
       "iam": "juliav6"
     }
+  ],
+  "webhooks": [
+    {
+      "iam": "juliav4",
+      "url": "https://example.com/reload/allowlist",
+      "method": "POST",
+      "headers": {
+        "Authorization": "Bearer token123"
+      },
+      "timeout": 10,
+      "debounce": 5
+    },
+    {
+      "iam": "juliav6",
+      "url": "https://example.com/reload/allowlist",
+      "method": "POST",
+      "headers": {
+        "Authorization": "Bearer token123"
+      },
+      "timeout": 10,
+      "debounce": 5
+    }
   ]
 }
