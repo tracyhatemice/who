@@ -7,7 +7,14 @@ import (
 
 // Config holds all application configuration.
 type Config struct {
+	Who  []WhoEntry  `json:"who"`
 	DDNS []DDNSEntry `json:"ddns"`
+}
+
+// WhoEntry represents a pre-loaded name-to-IP mapping.
+type WhoEntry struct {
+	IAM string `json:"iam"`
+	IP  string `json:"ip"`
 }
 
 // DDNSEntry represents a single DDNS configuration.
@@ -42,4 +49,13 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, err
 	}
 	return &cfg, nil
+}
+
+// SaveConfig writes configuration back to a JSON file.
+func SaveConfig(path string, cfg *Config) error {
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, append(data, '\n'), 0o600)
 }

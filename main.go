@@ -46,11 +46,29 @@ func main() {
 		log.Printf("DDNS: loaded %d entries", len(cfg.DDNS))
 	}
 
+	// Build who names set and pre-load IPs into store
+	store := NewStore()
+	whoNames := make(map[string]bool)
+	for _, entry := range cfg.Who {
+		if entry.IAM != "" {
+			whoNames[entry.IAM] = true
+			if entry.IP != "" {
+				store.Set(entry.IAM, entry.IP)
+			}
+		}
+	}
+	if len(whoNames) > 0 {
+		log.Printf("WHO: pre-loaded %d entries", len(whoNames))
+	}
+
 	// Create server with dependencies
 	server := &Server{
-		store:   NewStore(),
-		ddns:    ddnsDispatcher,
-		verbose: verbose,
+		store:      store,
+		ddns:       ddnsDispatcher,
+		verbose:    verbose,
+		configPath: configPath,
+		whoNames:   whoNames,
+		config:     cfg,
 	}
 
 	// Setup routes

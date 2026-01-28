@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/tracyhatemice/who/ddns"
@@ -13,9 +14,13 @@ import (
 
 // Server holds the application dependencies.
 type Server struct {
-	store   *Store
-	ddns    *ddns.Dispatcher
-	verbose bool
+	store      *Store
+	ddns       *ddns.Dispatcher
+	verbose    bool
+	configPath string
+	configMu   sync.Mutex  // protects config file writes
+	whoNames   map[string]bool
+	config     *Config
 }
 
 // getClientIP extracts the client IP from the request.
@@ -78,12 +83,38 @@ func (s *Server) iamHandler(w http.ResponseWriter, r *http.Request) {
 	// Store the mapping (thread-safe)
 	changed := s.store.Set(name, ip)
 
-	// Trigger DDNS update if IP changed and name is non-empty (non-blocking)
-	if changed && name != "" && s.ddns != nil {
-		s.ddns.TriggerUpdate(name, ip)
+	// Trigger side effects if IP changed and name is non-empty
+	if changed && name != "" {
+		// Write back to config file if name is in who config
+		if s.whoNames[name] {
+			go s.saveWhoIP(name, ip)
+		}
+		// Trigger DDNS update (non-blocking)
+		if s.ddns != nil {
+			s.ddns.TriggerUpdate(name, ip)
+		}
 	}
 
 	_, _ = fmt.Fprintln(w, ip)
+}
+
+// saveWhoIP updates the IP for a who entry in the config file.
+func (s *Server) saveWhoIP(name, ip string) {
+	s.configMu.Lock()
+	defer s.configMu.Unlock()
+
+	for i, entry := range s.config.Who {
+		if entry.IAM == name {
+			s.config.Who[i].IP = ip
+			break
+		}
+	}
+
+	if err := SaveConfig(s.configPath, s.config); err != nil {
+		log.Printf("WHO: failed to save config for %s: %v", name, err)
+	} else {
+		log.Printf("WHO: saved %s -> %s to config", name, ip)
+	}
 }
 
 func (s *Server) whoisHandler(w http.ResponseWriter, r *http.Request) {

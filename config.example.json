@@ -1,4 +1,14 @@
 {
+  "who": [
+    {
+      "iam": "juliav4",
+      "ip": "111.111.111.111"
+    },
+    {
+      "iam": "juliav6",
+      "ip": "2001:db8::1"
+    }
+  ],
   "ddns": [
     {
       "provider": "route53",
