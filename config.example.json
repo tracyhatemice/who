@@ -5,8 +5,7 @@
       "ip": "111.111.111.111"
     },
     {
-      "iam": "juliav6",
-      "ip": "2001:db8::1"
+      "iam": "juliav6"
     },
     {
       "iam": "julia",
@@ -42,9 +41,7 @@
       "method": "POST",
       "headers": {
         "Authorization": "Bearer token123"
-      },
-      "timeout": 10,
-      "debounce": 5
+      }
     },
     {
       "iam": "juliav6",
@@ -52,9 +49,7 @@
       "method": "POST",
       "headers": {
         "Authorization": "Bearer token123"
-      },
-      "timeout": 10,
-      "debounce": 5
+      }
     }
   ]
 }

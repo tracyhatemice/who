@@ -33,12 +33,10 @@ type DDNSEntry struct {
 
 // WebhookEntry represents a webhook notification configuration.
 type WebhookEntry struct {
-	IAM      string            `json:"iam"`
-	URL      string            `json:"url"`
-	Method   string            `json:"method"`
-	Headers  map[string]string `json:"headers"`
-	Timeout  int               `json:"timeout"`
-	Debounce int               `json:"debounce"`
+	IAM     string            `json:"iam"`
+	URL     string            `json:"url"`
+	Method  string            `json:"method"`
+	Headers map[string]string `json:"headers"`
 }
 
 // LoadConfig reads configuration from a JSON file.

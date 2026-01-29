@@ -53,12 +53,10 @@ func main() {
 		webhookConfigs := make([]webhook.Config, len(cfg.Webhooks))
 		for i, entry := range cfg.Webhooks {
 			webhookConfigs[i] = webhook.Config{
-				IAM:      entry.IAM,
-				URL:      entry.URL,
-				Method:   entry.Method,
-				Headers:  entry.Headers,
-				Timeout:  entry.Timeout,
-				Debounce: entry.Debounce,
+				IAM:     entry.IAM,
+				URL:     entry.URL,
+				Method:  entry.Method,
+				Headers: entry.Headers,
 			}
 		}
 		webhookDispatcher = webhook.NewDispatcher(webhookConfigs)
