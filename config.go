@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
+	"io/fs"
 	"os"
 )
 
@@ -47,7 +49,7 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	data, err := os.ReadFile(path)
-	if os.IsNotExist(err) {
+	if errors.Is(err, fs.ErrNotExist) {
 		return &Config{}, nil
 	}
 	if err != nil {

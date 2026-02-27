@@ -82,13 +82,13 @@ func (d *Dispatcher) TriggerUpdate(name, ip string) {
 
 	for _, entry := range entries {
 		// Async update - don't block the HTTP handler
-		go func(e *Entry) {
-			log.Printf("DDNS: updating %s -> %s for IAM %s", e.Domain, ip, name)
-			if err := e.Provider.Update(e.Domain, ip, e.TTL); err != nil {
-				log.Printf("DDNS: failed to update %s: %v", e.Domain, err)
+		go func() {
+			log.Printf("DDNS: updating %s -> %s for IAM %s", entry.Domain, ip, name)
+			if err := entry.Provider.Update(entry.Domain, ip, entry.TTL); err != nil {
+				log.Printf("DDNS: failed to update %s: %v", entry.Domain, err)
 			} else {
-				log.Printf("DDNS: successfully updated %s -> %s", e.Domain, ip)
+				log.Printf("DDNS: successfully updated %s -> %s", entry.Domain, ip)
 			}
-		}(entry)
+		}()
 	}
 }
