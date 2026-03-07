@@ -143,10 +143,9 @@ echo "$IPV4_SERVICES_JSON" | jsonfilter -e '@.services[*]' | while read -r svc; 
 
   [ -z "$name" ] && continue
   logger -t "$TAG" "[$name] DDNS update triggered"
-  if ! curl -4 -fsS --retry 3 --max-time 10 \
-       "${DDNS_ENDPOINT}/${name}" >/dev/null 2>&1; then
-    logger -t "$TAG" "[$name] DDNS update request failed"
-  fi
+  (curl -4 -fsS --retry 3 --max-time 10 \
+       "${DDNS_ENDPOINT}/${name}" >/dev/null 2>&1 || \
+    logger -t "$TAG" "[$name] DDNS update request failed") &
 done
 
 . /lib/functions/network.sh
@@ -168,17 +167,16 @@ echo "$IPV6_SERVICES_JSON" | jsonfilter -e '@.services[*]' | while read -r svc; 
     continue
   fi
   logger -t "$TAG" "[$name] DDNS update triggered"
-  if ! curl -fsS --retry 3 --max-time 10 \
-       "${DDNS_ENDPOINT}/${name}/${gua}" >/dev/null 2>&1; then
-    logger -t "$TAG" "[$name] DDNS update request failed"
-  fi
+  (curl -fsS --retry 3 --max-time 10 \
+       "${DDNS_ENDPOINT}/${name}/${gua}" >/dev/null 2>&1 || \
+    logger -t "$TAG" "[$name] DDNS update request failed") &
 done
 
 name="router-ipv6"
 logger -t "$TAG" "[$name] DDNS update triggered"
-if ! curl -6 -fsS --retry 3 --max-time 10 \
-    "${DDNS_ENDPOINT}/${name}" >/dev/null 2>&1; then
-  logger -t "$TAG" "[$name] DDNS update request failed"                                                 
-fi
+(curl -6 -fsS --retry 3 --max-time 10 \
+    "${DDNS_ENDPOINT}/${name}" >/dev/null 2>&1 || \
+  logger -t "$TAG" "[$name] DDNS update request failed") &
 
+wait
 exit 0
