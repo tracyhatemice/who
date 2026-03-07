@@ -1,0 +1,184 @@
+#!/bin/sh
+# OpenWrt hotplug script: DDNS update on IPv6 and IPv6 prefix change
+# Placed under /etc/hotplug.d/iface/70-ddns-update
+
+TAG="ddns"
+DDNS_ENDPOINT="https://example.org/iam"
+
+IPV4_SERVICES_JSON='
+{
+  "services": [
+    { "name": "wan-ipv4" }
+  ]
+}
+'
+
+IPV6_SERVICES_JSON='
+{
+  "services": [
+    { "name": "lan-ipv6",  "ula": "fdda:cafe::4" },
+    { "name": "lan-ipv6-2",  "ula": "fdda:cafe::5" },
+    { "name": "lan-ipv6-3",    "ula": "fdda:cafe::6" }
+  ]
+}
+'
+
+# --- IPv6 helper functions ---
+expand_ipv6() {
+  printf '%s' "$1" | awk '{
+    addr = $0
+    sub(/\/[0-9]+$/, "", addr)
+
+    if (index(addr, "::")) {
+      n = split(addr, parts, ":")
+      non_empty = 0
+      for (i = 1; i <= n; i++) {
+        if (parts[i] != "") non_empty++
+      }
+      missing = 8 - non_empty
+
+      result = ""
+      expanded = 0
+      for (i = 1; i <= n; i++) {
+        if (parts[i] == "") {
+          if (!expanded) {
+            for (j = 0; j < missing; j++) {
+              result = result "0000"
+            }
+            expanded = 1
+          }
+        } else {
+          result = result sprintf("%04s", parts[i])
+        }
+      }
+      gsub(/ /, "0", result)
+      print result
+    } else {
+      n = split(addr, parts, ":")
+      result = ""
+      for (i = 1; i <= n; i++) {
+        result = result sprintf("%04s", parts[i])
+      }
+      gsub(/ /, "0", result)
+      print result
+    }
+  }'
+}
+
+compress_ipv6() {
+  printf '%s' "$1" | awk '{
+    input = $0
+    if (length(input) != 32) {
+      print ""; exit
+    }
+
+    for (i = 0; i < 8; i++) {
+      hex = substr(input, i*4+1, 4)
+      gsub(/^0+/, "", hex)
+      h[i] = (hex == "") ? "0" : hex
+    }
+
+    max_start = -1; max_len = 0
+    start = -1; len = 0
+    for (i = 0; i < 8; i++) {
+      if (h[i] == "0") {
+        if (start < 0) start = i
+        len++
+      } else {
+        if (len >= 2 && len > max_len) { max_start = start; max_len = len }
+        start = -1; len = 0
+      }
+    }
+    if (len >= 2 && len > max_len) { max_start = start; max_len = len }
+
+    out = ""
+    i = 0
+    while (i < 8) {
+      if (max_len >= 2 && i == max_start) {
+        out = out (i == 0 ? "::" : "::")
+        i += max_len
+      } else {
+        if (i > 0 && substr(out, length(out), 1) != ":") out = out ":"
+        out = out h[i]
+        i++
+      }
+    }
+    print out
+  }'
+}
+
+construct_gua() {
+  local prefix="$1"
+  local ula="$2"
+
+  local pfx_len="${prefix##*/}"
+  if [ -z "$pfx_len" ] || [ "$pfx_len" = "$prefix" ]; then
+    pfx_len=64
+  fi
+
+  if [ $((pfx_len % 4)) -ne 0 ]; then
+    pfx_len=$((pfx_len / 4 * 4))
+  fi
+
+  local nibbles=$((pfx_len / 4))
+  local pfx_exp=$(expand_ipv6 "$prefix")
+  local ula_exp=$(expand_ipv6 "$ula")
+
+  local pfx_part=$(printf '%s' "$pfx_exp" | cut -c1-"$nibbles")
+  local ula_part=$(printf '%s' "$ula_exp" | cut -c$((nibbles + 1))-32)
+
+  compress_ipv6 "${pfx_part}${ula_part}"
+}
+
+case "$ACTION" in
+  ifup) ;;
+  ifupdate)
+    [ -z "$IFUPDATE_ADDRESSES" ] && [ -z "$IFUPDATE_DATA" ] && exit 0
+    ;;
+  *) exit 0 ;;
+esac
+
+echo "$IPV4_SERVICES_JSON" | jsonfilter -e '@.services[*]' | while read -r svc; do
+  name=$(echo "$svc" | jsonfilter -e '@.name')
+
+  [ -z "$name" ] && continue
+  logger -t "$TAG" "[$name] DDNS update triggered"
+  if ! curl -4 -fsS --retry 3 --max-time 10 \
+       "${DDNS_ENDPOINT}/${name}" >/dev/null 2>&1; then
+    logger -t "$TAG" "[$name] DDNS update request failed"
+  fi
+done
+
+. /lib/functions/network.sh
+network_flush_cache
+
+network_find_wan6 WAN_IF
+network_get_prefix6 WAN_PFX "$WAN_IF"
+[ -z "$WAN_PFX" ] && exit 0
+
+echo "$IPV6_SERVICES_JSON" | jsonfilter -e '@.services[*]' | while read -r svc; do
+  name=$(echo "$svc" | jsonfilter -e '@.name')
+  ula=$(echo "$svc" | jsonfilter -e '@.ula')
+
+  [ -z "$name" ] || [ -z "$ula" ] && continue
+
+  gua=$(construct_gua "$WAN_PFX" "$ula")
+  if [ -z "$gua" ]; then
+    logger -t "$TAG" "[$name] Failed to construct GUA"
+    continue
+  fi
+  logger -t "$TAG" "[$name] DDNS update triggered"
+  if ! curl -fsS --retry 3 --max-time 10 \
+       "${DDNS_ENDPOINT}/${name}/${gua}" >/dev/null 2>&1; then
+    logger -t "$TAG" "[$name] DDNS update request failed"
+  fi
+done
+
+name="router-ipv6"
+logger -t "$TAG" "[$name] DDNS update triggered"
+if ! curl -6 -fsS --retry 3 --max-time 10 \
+    "${DDNS_ENDPOINT}/${name}" >/dev/null 2>&1; then
+  logger -t "$TAG" "[$name] DDNS update request failed"                                                 
+fi
+
+exit 0
