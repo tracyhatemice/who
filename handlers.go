@@ -65,15 +65,6 @@ func (s *Server) whoamiHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) whoamiHeadersHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-
-	// if ip := getClientIP(r); ip != "" {
-	// 	_, _ = fmt.Fprintln(w, ip)
-	// }
-	// if ua := r.UserAgent(); ua != "" {
-	// 	_, _ = fmt.Fprintln(w, ua)
-	// }
-
 	names := make([]string, 0, len(r.Header))
 	for name := range r.Header {
 		names = append(names, name)
