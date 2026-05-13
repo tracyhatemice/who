@@ -98,6 +98,7 @@ func main() {
 	// Setup routes
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /whoami", server.withLogging(server.whoamiHandler))
+	mux.HandleFunc("GET /whoami/all", server.withLogging(server.whoamiAllHandler))
 	mux.HandleFunc("GET /iam/{name}", server.withLogging(server.iamHandler))
 	mux.HandleFunc("GET /iam/{name}/{ip}", server.withLogging(server.iamHandler))
 	mux.HandleFunc("GET /whois/{name}", server.withLogging(server.whoisHandler))

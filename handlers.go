@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -60,6 +61,24 @@ func getClientIP(r *http.Request) string {
 func (s *Server) whoamiHandler(w http.ResponseWriter, r *http.Request) {
 	if ip := getClientIP(r); ip != "" {
 		_, _ = fmt.Fprintln(w, ip)
+	}
+}
+
+func (s *Server) whoamiAllHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+
+	_, _ = fmt.Fprintln(w, getClientIP(r))
+	_, _ = fmt.Fprintln(w, r.UserAgent())
+
+	names := make([]string, 0, len(r.Header))
+	for name := range r.Header {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		for _, value := range r.Header[name] {
+			_, _ = fmt.Fprintf(w, "%s: %s\n", name, value)
+		}
 	}
 }
 
