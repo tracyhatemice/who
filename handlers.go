@@ -64,11 +64,15 @@ func (s *Server) whoamiHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) whoamiAllHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) whoamiHeadersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 
-	_, _ = fmt.Fprintln(w, getClientIP(r))
-	_, _ = fmt.Fprintln(w, r.UserAgent())
+	// if ip := getClientIP(r); ip != "" {
+	// 	_, _ = fmt.Fprintln(w, ip)
+	// }
+	// if ua := r.UserAgent(); ua != "" {
+	// 	_, _ = fmt.Fprintln(w, ua)
+	// }
 
 	names := make([]string, 0, len(r.Header))
 	for name := range r.Header {
@@ -77,7 +81,9 @@ func (s *Server) whoamiAllHandler(w http.ResponseWriter, r *http.Request) {
 	sort.Strings(names)
 	for _, name := range names {
 		for _, value := range r.Header[name] {
-			_, _ = fmt.Fprintf(w, "%s: %s\n", name, value)
+			if value != "" {
+				_, _ = fmt.Fprintf(w, "%s: %s\n", name, value)
+			}
 		}
 	}
 }
