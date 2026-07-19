@@ -34,6 +34,12 @@
       "iam": "juliav6"
     }
   ],
+  "touch": [
+    {
+      "iam": "julia",
+      "path": "/var/run/who/julia.json"
+    }
+  ],
   "webhooks": [
     {
       "iam": "juliav4",

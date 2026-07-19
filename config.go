@@ -9,16 +9,24 @@ import (
 
 // Config holds all application configuration.
 type Config struct {
-	Who      []WhoEntry      `json:"who"`
-	DDNS     []DDNSEntry     `json:"ddns"`
-	Webhooks []WebhookEntry  `json:"webhooks"`
+	Who      []WhoEntry     `json:"who"`
+	DDNS     []DDNSEntry    `json:"ddns"`
+	Webhooks []WebhookEntry `json:"webhooks"`
+	Touch    []TouchEntry   `json:"touch"`
 }
 
 // WhoEntry represents a pre-loaded name-to-IP mapping or alias.
 type WhoEntry struct {
-	IAM   string   `json:"iam"`
-	IP    string   `json:"ip,omitempty"`
-	Alias []string `json:"alias,omitempty"`
+	IAM        string   `json:"iam"`
+	IP         string   `json:"ip,omitempty"`
+	Alias      []string `json:"alias,omitempty"`
+	LastUpdate int64    `json:"last_update,omitempty"`
+}
+
+// TouchEntry configures a file that mirrors an iam record as JSON.
+type TouchEntry struct {
+	IAM  string `json:"iam"`
+	Path string `json:"path"`
 }
 
 // DDNSEntry represents a single DDNS configuration.

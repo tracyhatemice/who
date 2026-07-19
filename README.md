@@ -136,7 +136,8 @@ Predefine addresses by including both `iam` and `ip` in the config so the servic
 ```
 
 - On startup: entries with `ip` set are loaded into the store, immediately available via `/whois/{name}`
-- On IP change: if `{name}` is in the `who` config, the new IP is written back to `config.json`
+- On IP change: if `{name}` is in the `who` config, the new IP is written back to `config.json` together with a `last_update` field (unix timestamp of the change)
+- The service records a last-change timestamp for every name; re-registering the same IP does not bump it
 - Names not in the `who` config are stored in memory only (lost on restart)
 
 ### 2. DDNS
@@ -317,4 +318,56 @@ cannot update alias
 - Aliases are resolved at query time, so they always reflect current IP values
 - Circular aliases are not validated - avoid creating them
 - Aliases cannot reference other aliases (only regular IAM names work)
+
+### 5. Touch Files
+
+The touch feature mirrors an iam record to a JSON file on disk whenever its IP changes. Other processes (firewall scripts, config generators, cron jobs) can consume the file without talking to the HTTP API.
+
+#### Configuration
+
+Add `touch` entries to your `config.json`:
+
+```json
+{
+  "touch": [
+    {
+      "iam": "julia",
+      "path": "/var/run/who/julia.json"
+    }
+  ]
+}
+```
+
+| Field  | Description                                                              |
+|--------|--------------------------------------------------------------------------|
+| `iam`  | Name (or alias) whose record is written (matches `{name}` in `/iam/{name}`) |
+| `path` | Filesystem path of the output file                                       |
+
+#### Output Format
+
+The file contains a single flattened JSON record. `ip` is always an array and `last_update` is the unix timestamp (seconds) of the last IP change:
+
+```json
+{
+  "iam": "juliav4",
+  "ip": ["203.0.113.50"],
+  "last_update": 1752900000
+}
+```
+
+For an alias, the member IPs are flattened into the `ip` array (in alias-list order, members without IPs omitted) and `last_update` is the most recent change among the members:
+
+```json
+{
+  "iam": "julia",
+  "ip": ["111.111.111.111", "2001:db8::1"],
+  "last_update": 1752900000
+}
+```
+
+#### How It Works
+
+1. On startup, every configured touch file is created immediately with the currently known content (`ip` is `[]` and `last_update` is `0` if nothing is known yet)
+2. When `/iam/{name}` changes an IP, every touch entry whose `iam` is that name — or is an alias containing it — is rewritten asynchronously
+3. Files are written with mode `0644`; write failures are logged and do not affect the API response
 

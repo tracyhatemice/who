@@ -25,6 +25,8 @@ type Server struct {
 	whoNames   map[string]bool
 	aliases    map[string][]string
 	config     *Config
+	touch      []TouchEntry
+	touchMu    sync.Mutex // protects touch file writes
 }
 
 // getClientIP extracts the client IP from the request.
@@ -114,6 +116,10 @@ func (s *Server) iamHandler(w http.ResponseWriter, r *http.Request) {
 		if s.whoNames[name] {
 			go s.saveWhoIP(name, ip)
 		}
+		// Rewrite touch files that include this name (non-blocking)
+		for _, entry := range s.touchEntriesFor(name) {
+			go s.writeTouchFile(entry)
+		}
 		// Trigger DDNS update (non-blocking)
 		if s.ddns != nil {
 			s.ddns.TriggerUpdate(name, ip)
@@ -127,14 +133,17 @@ func (s *Server) iamHandler(w http.ResponseWriter, r *http.Request) {
 	_, _ = fmt.Fprintln(w, ip)
 }
 
-// saveWhoIP updates the IP for a who entry in the config file.
+// saveWhoIP updates the IP and last-change timestamp for a who entry
+// in the config file.
 func (s *Server) saveWhoIP(name, ip string) {
 	s.configMu.Lock()
 	defer s.configMu.Unlock()
 
+	_, lastUpdate, _ := s.store.GetRecord(name)
 	for i, entry := range s.config.Who {
 		if entry.IAM == name {
 			s.config.Who[i].IP = ip
+			s.config.Who[i].LastUpdate = lastUpdate
 			break
 		}
 	}

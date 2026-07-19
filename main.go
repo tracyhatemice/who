@@ -74,8 +74,8 @@ func main() {
 				// This is an alias entry
 				aliases[entry.IAM] = entry.Alias
 			} else if entry.IP != "" {
-				// This is a regular IP entry
-				store.Set(entry.IAM, entry.IP)
+				// This is a regular IP entry; restore its last-change timestamp
+				store.Load(entry.IAM, entry.IP, entry.LastUpdate)
 			}
 		}
 	}
@@ -93,6 +93,13 @@ func main() {
 		whoNames:   whoNames,
 		aliases:    aliases,
 		config:     cfg,
+		touch:      cfg.Touch,
+	}
+
+	// Create touch files with present content on startup
+	if len(cfg.Touch) > 0 {
+		server.writeAllTouchFiles()
+		log.Printf("TOUCH: loaded %d entries", len(cfg.Touch))
 	}
 
 	// Setup routes
